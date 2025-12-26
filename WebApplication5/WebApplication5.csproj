@@ -27,4 +27,8 @@
       <Folder Include="Infrastructures\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Include="obj\Debug\net8.0\WebApplication5.sourcelink.json" />
+    </ItemGroup>
+
 </Project>

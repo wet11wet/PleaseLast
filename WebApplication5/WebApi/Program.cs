@@ -74,23 +74,11 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// Создать API для управления бронированиями.
-// Должен быть функционал администратора:
-// создать комнату, удалить,
-// получить (У комнаты есть класс, стоимость, какое-то описание..).
-
-// Так же функционал пользователя:
-// он может забронировать комнату,
-// получить информацию по бронированию,
-// нельзя забронировать комнату,
-// которую забронировал другой пользователь.
-//
-//     Управление данным - Entity Framework Core
-// БД  - PostgreSQL, необходимо развернуть в докере
-// Проект - WebAPI
-// Слоёная архитектура
-
-// Configure the HTTP request pipeline.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ContextDb>();
+    db.Database.Migrate();
+}
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
