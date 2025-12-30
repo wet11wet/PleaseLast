@@ -1,0 +1,22 @@
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json

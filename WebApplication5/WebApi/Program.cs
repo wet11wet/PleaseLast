@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WebApplication5;
+using WebApplication5.Application.Services.Auth;
+using WebApplication5.Application.Services.Room;
 using WebApplication5.Context;
 using WebApplication5.Endpoints;
 using WebApplication5.Repository;
@@ -71,6 +73,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly",
         policy => policy.RequireRole("Admin"));
 });
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 

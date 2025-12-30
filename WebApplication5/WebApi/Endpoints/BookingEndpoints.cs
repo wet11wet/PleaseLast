@@ -1,7 +1,9 @@
 using System.Net;
 using AutoMapper;
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Validations;
+using WebApplication5.Application.Services.Room;
 using WebApplication5.Models;
 using WebApplication5.Models.DTO;
 using WebApplication5.Repository.IRepository;
@@ -11,16 +13,6 @@ namespace WebApplication5.Endpoints;
 
 public static class BookingEndpoints
 {
-// Должен быть функционал администратора:
-// 1 создать комнату, 2 удалить,
-// 3 получить (У комнаты есть класс, стоимость, какое-то описание)(у админа просто больше инфы)
-    
-// Так же функционал пользователя:
-// 1 он может забронировать комнату,
-// 2 получить информацию по бронированию, (дать айди комнаты и понять забронирована или нет)
-// нельзя забронировать комнату,
-// которую забронировал другой пользователь.
-
     public static void ConfigureBookingEndpoints(this WebApplication app)
     {
         app.MapGet("/api/room/{id:int}", GetRoom)
@@ -53,181 +45,31 @@ public static class BookingEndpoints
     }
     
     private static async Task<IResult> GetRoom(int id, 
-        IRoomRepository roomRepo, 
-        IMapper mapper,
-        HttpContext httpContext)
+        [FromServices] IRoomService roomService)
     {
-        ApiResponse response = new ApiResponse()
-        {
-            IsSuccess = false,
-            StatusCode = HttpStatusCode.NotFound
-        };
+        var response = await roomService.RoomServiceGet(id);
         
-        var room = await roomRepo.GetAsync(id);
-        if (room == null)
-        {
-            response.ErrorMessages.Add( "id is not valid");
-            return Results.NotFound(response);
-        }
-
-        var isAdmin = httpContext.User.IsInRole("Admin");
-
-        if (isAdmin)
-        {
-            AdminViewDTO result1 = mapper.Map<AdminViewDTO>(room);
-            response.Result = result1;
-            response.StatusCode = HttpStatusCode.OK;
-            response.IsSuccess = true;
-        }
-        else
-        {
-            RoomDTO result2 = mapper.Map<RoomDTO>(room);
-            response.Result = result2;
-            response.StatusCode = HttpStatusCode.OK;
-            response.IsSuccess = true;
-        }
-        
-        return Results.Ok(response);
+        return Results.Json(response, statusCode:(int)response.StatusCode);
     }
     
     private static async Task<IResult> BookRoom(RoomUpdateDTO updateDto,
-        IMapper mapper,
-        IRoomRepository roomRepo,
-        IValidator<RoomUpdateDTO> validator)
+        [FromServices] IRoomService roomService)
     {
-        ApiResponse response;
-        
-        var validationRes = await validator.ValidateAsync(updateDto);
-
-        if (!validationRes.IsValid)
-        {
-            response = new()
-            {
-                StatusCode = HttpStatusCode.BadRequest,
-                Result = null,
-                IsSuccess = false,
-            };
-            response.ErrorMessages.Add("Necessary field should not be null");
-            return Results.BadRequest(response);
-        }
-
-        var room = await roomRepo.GetAsync(updateDto.RoomName);
-        if (room == null)
-        {
-            response = new()
-            {
-                StatusCode = HttpStatusCode.NotFound,
-                Result = null,
-                IsSuccess = false,
-            };
-            response.ErrorMessages.Add( "RoomName is not valid");
-            return Results.NotFound(response);
-        }
-        if (!room.IsAvailable)
-        {
-            response = new()
-            {
-                StatusCode = HttpStatusCode.Conflict,
-                Result = null,
-                IsSuccess = false,
-            };
-            response.ErrorMessages.Add("Room is not available");
-            return Results.Conflict(response);
-        }
-        
-        room.IsAvailable = false;
-
-        await roomRepo.UpdateAsync(room);
-        await roomRepo.SaveAsync();
-
-        RoomDTO result = mapper.Map<RoomDTO>(room);
-        response = new ApiResponse()
-        {
-            IsSuccess = true,
-            StatusCode = HttpStatusCode.OK,
-            Result = result
-        };
-
-        return Results.Ok(response);
+        var response = await roomService.RoomServiceBook(updateDto);
+        return Results.Json(response, statusCode: (int) response.StatusCode);
     }
     
     private static async Task<IResult> CreateRoom(RoomCreateDTO createDto,
-        IMapper mapper,
-        IValidator<RoomCreateDTO> validator,
-        IRoomRepository roomRepo)
+        [FromServices] IRoomService roomService)
     {
-        ApiResponse response;
-
-        var validationRes = await validator.ValidateAsync(createDto);
-        if (!validationRes.IsValid)
-        {
-            response = new()
-            {
-                StatusCode = HttpStatusCode.BadRequest,
-                Result = null,
-                IsSuccess = false,
-            };
-            response.ErrorMessages.Add("Necessary field should not be null");
-            return Results.BadRequest(response);
-        }
-
-        var roomExisting = await roomRepo.GetAsync(createDto.RoomName);
-        if (roomExisting is not null)
-        {
-            response = new()
-            {
-                StatusCode = HttpStatusCode.Conflict,
-                Result = null,
-                IsSuccess = false,
-            };
-            response.ErrorMessages.Add("Room already exists");
-            return Results.Conflict(response);
-        }
-
-        var room = mapper.Map<Room>(createDto);
-        await roomRepo.CreateAsync(room);
-        await roomRepo.SaveAsync();
-
-        RoomDTO result = mapper.Map<RoomDTO>(room);
-        
-        response = new()
-        {
-            StatusCode = HttpStatusCode.Created,
-            Result = result,
-            IsSuccess = true,
-        };
-        
-        return Results.CreatedAtRoute("GetRoom", new {id = room.Id}, result);
+        var response = await roomService.RoomServiceCreate(createDto);
+        return Results.Json(response, statusCode: (int)response.StatusCode);
     }
     
     private static async Task<IResult> DeleteRoom(int id,
-        IRoomRepository roomRepo)
+        [FromServices] IRoomService roomService)
     {
-        ApiResponse response;
-
-        var room = await roomRepo.GetAsync(id);
-        if (room == null)
-        {
-            response = new()
-            {
-                StatusCode = HttpStatusCode.NotFound,
-                Result = null,
-                IsSuccess = false,
-            };
-            response.ErrorMessages.Add( "ID is not valid");
-            return Results.NotFound(response);
-        }
-        
-        await roomRepo.DeleteAsync(room);
-        await roomRepo.SaveAsync();
-        
-        response = new()
-        {
-            StatusCode = HttpStatusCode.OK,
-            Result = null,
-            IsSuccess = true,
-        };
-        
-        return Results.Ok(response);
+        var response = await roomService.RoomServiceDelete(id);
+        return Results.Json(response, statusCode: (int)response.StatusCode);
     }
 }
